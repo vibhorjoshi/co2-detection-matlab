@@ -28,9 +28,6 @@ function [co2_map, binary_map] = co2_sfa(hcube, threshold)
 %% ---- Build dual-Gaussian CO2 reference absorption spectrum ------------
 %   CO2 bands: 1.6 µm (~1575 nm, weaker) and 2.0 µm (~2005 nm, stronger)
 %   The reference represents fractional absorption depth (positive = absorbed).
-%
-%   Gaussian parameters tuned to approximate HITRAN CO2 cross-sections
-%   as observed in AVIRIS imagery (Green 2001; Dennison et al. 2013).
 
     amp1    = 0.30;   cen1 = 1575;  sig1 = 15;   % 1.6 µm band
     amp2    = 0.70;   cen2 = 2005;  sig2 = 12;   % 2.0 µm band  (dominant)
