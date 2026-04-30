@@ -205,24 +205,6 @@ main_co2_visualisation
 2. 2×2 grid of binary hotspot masks
 3. 2×2 geospatial hotspot maps with Easting/Northing axes
 
-**Statistics printed to Command Window:**
-```
-CIBR: mean=0.312, max=1.000, hotspot%=14.2%
-CTMF: mean=0.274, max=1.000, hotspot%=11.8%
-...
-```
-
----
-
-## Known Limitations
-
-- **No Mapping Toolbox:** Geospatial plots use `imagesc` with manually computed UTM coordinates. This works but does not produce a projected basemap. For proper georeferencing, use `worldmap` + `geoshow` with a `georasterref` object from the Mapping Toolbox.
-- **Different datasets per function:** Each function uses a different AVIRIS scene with different wavelength coverage. Results are not directly comparable across algorithms.
-- **CTMF dataset wavelength range:** The Cape Cod dataset used in `co2_ctmf.m` does not cover the 2.0 µm CO₂ SWIR band. The absorption signature used is a NIR proxy, not true CO₂.
-- **`co2_sfa` input mismatch in main script:** The main script calls `co2_sfa()` with no arguments, but the function requires a `hypercube` object. This will error unless fixed as shown above.
-
----
-
 ## License
 
 MIT
