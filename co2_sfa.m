@@ -1,77 +1,229 @@
-function [co2_map, binary_map] = co2_sfa(hcube, threshold)
+function [co2_map, binary_map] = co2_sfa()
 
-%% ---- Input validation --------------------------------------------------
-    arguments
-        hcube     (1,1)
-        threshold (1,1) double {mustBePositive} = 1.0
-    end
+clc;
+close all;
 
-%% ---- Setup -------------------------------------------------------------
-    wavelengths = hcube.Wavelength;
-    datacube    = double(hcube.DataCube);
-    [nRows, nCols, ~] = size(datacube);
+hdr_file = ...
+'D:\downloads\co2-detection-hyperspectral-main\f250923t01p00r13_rfl.hdr';
 
-%% ---- Select SWIR window covering both CO2 bands (1500–2100 nm) --------
-    swir_mask = wavelengths >= 1500 & wavelengths <= 2100;
-    swir_idx  = find(swir_mask);
-    wl_swir   = wavelengths(swir_idx);
-    n_swir    = numel(swir_idx);
+bin_file = ...
+'D:\downloads\co2-detection-hyperspectral-main\f250923t01p00r13_rfl.bin';
 
-    if n_swir < 10
-        error('co2_sfa:insufficientBands', ...
-            'Fewer than 10 bands found in 1500-2100 nm. Insufficient for SFA.');
-    end
+threshold = 1.0;
 
-    fprintf('SFA: working with %d SWIR bands (%.0f–%.0f nm).\n', ...
-        n_swir, wl_swir(1), wl_swir(end));
+assert(isfile(hdr_file), ...'HDR missing');
 
-%% ---- Build dual-Gaussian CO2 reference absorption spectrum ------------
-%   CO2 bands: 1.6 µm (~1575 nm, weaker) and 2.0 µm (~2005 nm, stronger)
-%   The reference represents fractional absorption depth (positive = absorbed).
+assert(isfile(bin_file), ...'BIN missing');
 
-    amp1    = 0.30;   cen1 = 1575;  sig1 = 15;   % 1.6 µm band
-    amp2    = 0.70;   cen2 = 2005;  sig2 = 12;   % 2.0 µm band  (dominant)
+% READ HDR
+txt = fileread(hdr_file);
 
-    ref_spectrum = amp1 * exp(-0.5*((wl_swir - cen1)/sig1).^2) + ...
-                   amp2 * exp(-0.5*((wl_swir - cen2)/sig2).^2);
+t = regexp( ...
+txt,...
+'samples\s*=\s*(\d+)',...
+'tokens',...
+'once');
 
-    % Normalise reference to unit length
-    ref_norm = ref_spectrum / norm(ref_spectrum);
+samples = str2double(t{1});
 
-%% ---- Normalised cross-correlation pixel-wise --------------------------
-    co2_map = zeros(nRows, nCols);
+t = regexp( ...
+txt,...
+'lines\s*=\s*(\d+)',...
+'tokens',...
+'once');
 
-    swir_data = datacube(:,:,swir_idx);   % [R x C x nSWIR]
+lines = str2double(t{1});
 
-    for r = 1:nRows
-        for c = 1:nCols
-            spec  = swir_data(r, c, :);
-            spec  = double(spec(:));   % [nSWIR x 1]
+t = regexp( ...
+txt,...
+'bands\s*=\s*(\d+)',...
+'tokens',...
+'once');
 
-            s_std = std(spec);
-            if s_std < 1e-10
-                co2_map(r,c) = 0;
-                continue;
-            end
+bands = str2double(t{1});
 
-            % Normalised cross-correlation at zero lag
-            spec_norm       = (spec - mean(spec)) / s_std;
-            ref_norm_zero   = ref_norm - mean(ref_norm);
-            co2_map(r,c)    = dot(spec_norm, ref_norm_zero) / n_swir;
-        end
-    end
+fprintf( ...
+'Metadata: %d x %d x %d\n',...
+lines,...
+samples,...
+bands);
 
-    % Clip negatives (anti-correlated pixels) and normalise to [0, 1]
-    co2_map(co2_map < 0) = 0;
-    mx = max(co2_map(:));
-    if mx > 0
-        co2_map = co2_map / mx;
-    end
+% LOAD SMALL SUBSET
 
-%% ---- Binary detection map (Otsu) -------------------------------------
-    t_otsu     = graythresh(co2_map) * threshold;
-    binary_map = co2_map > t_otsu;
+cube = multibandread( ...
+bin_file,...
+[lines samples bands],...
+'float32',...
+0,...
+'bsq',...
+'ieee-le',...
+{'Row','Range',[1 1000]},...
+{'Column','Range',[1 1000]});
 
-    fprintf('SFA complete. Otsu threshold = %.4f | Detections = %d / %d pixels\n', ...
-        t_otsu, sum(binary_map(:)), nRows*nCols);
+cube = double(cube);
+
+
+% READ WAVELENGTH
+
+w = regexp( ...
+txt,...
+'wavelength\s*=\s*\{([^}]*)\}',...
+'tokens',...
+'once');
+
+wavelengths = ...
+str2num(w{1});
+
+wavelengths = ...
+wavelengths(:);
+
+% DOWNSAMPLE
+
+cube = cube( ...
+1:5:end,...
+1:5:end,...
+:);
+
+[nRows,nCols,~] = ...
+size(cube);
+
+% SWIR REGION
+
+swir_mask = ...
+wavelengths >=1500 & ...
+wavelengths <=2100;
+
+swir_idx = ...
+find(swir_mask);
+
+wl_swir = ...
+wavelengths(swir_idx);
+
+n_swir = ...
+numel(swir_idx);
+
+if n_swir<10
+
+error( ...
+'Insufficient SWIR bands');
+
+end
+
+fprintf( ...
+'SWIR bands: %d\n',...
+n_swir);
+
+% REFERENCE CO2
+
+amp1=0.30;
+cen1=1575;
+sig1=15;
+
+amp2=0.70;
+cen2=2005;
+sig2=12;
+
+ref = ...
+amp1 .* ...
+exp( ...
+-0.5*((wl_swir-cen1)/sig1).^2) ...
++ ...
+amp2 .* ...
+exp( ...
+-0.5*((wl_swir-cen2)/sig2).^2);
+
+ref = ...
+ref ./ norm(ref);
+
+ref0 = ...
+ref - mean(ref);
+
+% SFA
+
+co2_map = ...
+zeros(nRows,nCols);
+
+swir_data = ...
+cube(:,:,swir_idx);
+
+for r=1:nRows
+
+for c=1:nCols
+
+spec = ...
+squeeze( ...
+swir_data(r,c,:));
+
+spec = double(spec);
+
+if std(spec)<1e-10
+
+continue;
+
+end
+
+spec = ...
+(spec-mean(spec)) ...
+/ std(spec);
+
+co2_map(r,c)= ...
+dot(spec,ref0) ...
+/ n_swir;
+
+end
+
+end
+
+%% =====================================================
+% NORMALIZE
+%% =====================================================
+
+co2_map( ...
+co2_map<0)=0;
+
+mx=max( ...
+co2_map(:));
+
+if mx>0
+
+co2_map= ...
+co2_map ./ mx;
+
+end
+
+%% =====================================================
+% THRESHOLD
+%% =====================================================
+
+t_otsu = ...
+graythresh( ...
+co2_map) ...
+* threshold;
+
+binary_map = ...
+co2_map > t_otsu;
+
+%% =====================================================
+% DISPLAY
+%% =====================================================
+
+figure;
+
+imagesc(co2_map);
+
+axis image;
+
+colorbar;
+
+title('SFA CO2');
+
+figure;
+
+imshow(binary_map);
+
+title('Detections');
+
+fprintf( ...
+'SFA complete\n');
+
 end
