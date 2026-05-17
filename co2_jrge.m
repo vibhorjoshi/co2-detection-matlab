@@ -1,137 +1,243 @@
 function [gas_map, binary_hotspots] = co2_jrge()
 
-clc; close all;
+clc;
+close all;
 
-% STEP 1: Load hyperspectral data
-%% ----------------------------------
+hdr_file = ...
+'D:\downloads\co2-detection-hyperspectral-main\f250923t01p00r13_rfl.hdr';
 
-hdr_file = 'D:\downloads\co2-detection-hyperspectral-main\AVIRIS-Classic_L2_Reflectance.f130503t01p00r23rdn_refl_img_corr.hdr';
+bin_file = ...
+'D:\downloads\co2-detection-hyperspectral-main\f250923t01p00r13_rfl.bin';
 
-% Load using hypercube
-hcube = hypercube(hdr_file);
+assert(isfile(hdr_file), ...
+'HDR missing');
 
-% 🔥 IMPORTANT: load full cube (not preview)
-cube = double(gather(hcube));
-wavelength = double(hcube.Wavelength);
+assert(isfile(bin_file), ...
+'BIN missing');
 
-[rows, cols, bands] = size(cube);
-fprintf('Loaded cube: %d x %d x %d\n', rows, cols, bands);
+%% =====================================
+% READ HDR
+%% =====================================
 
-%% ----------------------------------
-% STEP 2: FIX DATA SCALING (CRITICAL)
+txt = fileread(hdr_file);
 
-% Many AVIRIS datasets are scaled (0–10000)
-if max(cube(:)) > 10
-    cube = cube / 10000;   % convert to 0–1 reflectance
+t = regexp( ...
+txt,...
+'samples\s*=\s*(\d+)',...
+'tokens',...
+'once');
+
+samples = str2double(t{1});
+
+t = regexp( ...
+txt,...
+'lines\s*=\s*(\d+)',...
+'tokens',...
+'once');
+
+lines = str2double(t{1});
+
+t = regexp( ...
+txt,...
+'bands\s*=\s*(\d+)',...
+'tokens',...
+'once');
+
+bands = str2double(t{1});
+
+fprintf( ...
+'Metadata: %d x %d x %d\n',...
+lines,...
+samples,...
+bands);
+
+%% =====================================
+% LOAD SMALL SUBSET
+%% =====================================
+
+cube = multibandread( ...
+bin_file,...
+[lines samples bands],...
+'float32',...
+0,...
+'bsq',...
+'ieee-le',...
+{'Row','Range',[1 1000]},...
+{'Column','Range',[1 1000]});
+
+cube = double(cube);
+
+%% =====================================
+% WAVELENGTH
+%% =====================================
+
+w = regexp( ...
+txt,...
+'wavelength\s*=\s*\{([^}]*)\}',...
+'tokens',...
+'once');
+
+wavelength = str2num(w{1});
+
+wavelength = wavelength(:);
+
+%% =====================================
+% SCALE + CLEAN
+%% =====================================
+
+if max(cube(:))>10
+
+cube = cube/10000;
+
 end
 
-% Remove invalid values safely
-cube(cube <= 0) = NaN;
-cube(cube > 1) = NaN;
+cube(isnan(cube))=0;
 
-%% ----------------------------------
-% STEP 3: Downsample (faster processing)
-%% ----------------------------------
+cube(isinf(cube))=0;
 
-ds = 5;
-cube = cube(1:ds:end, 1:ds:end, :);
-[rows, cols, bands] = size(cube);
+cube(cube<0)=0;
 
-%% ----------------------------------
-% STEP 4: Reshape
-%% ----------------------------------
+%% =====================================
+% DOWNSAMPLE
+%% =====================================
 
-reshapedData = reshape(cube, [], bands);
+cube = cube( ...
+1:5:end,...
+1:5:end,...
+:);
 
-%% ----------------------------------
-% STEP 5: Smooth reflectance
-%% ----------------------------------
+[rows,cols,bands] = ...
+size(cube);
 
-reflectance_estimate = reshapedData;
+reshapedData = ...
+reshape( ...
+cube,...
+[],...
+bands);
 
-for i = 1:size(reshapedData,1)
+%% =====================================
+% REFLECTANCE ESTIMATION
+%% =====================================
 
-    spectrum = reshapedData(i,:);
+reflectance_estimate = ...
+reshapedData;
 
-    if any(isnan(spectrum)) || std(spectrum)==0
-        continue;
-    end
+for i=1:size(reshapedData,1)
 
-    % slightly reduced smoothing → better accuracy
-    reflectance_estimate(i,:) = ...
-        fnval(csaps(1:bands, spectrum, 0.9), 1:bands);
+spec = ...
+reshapedData(i,:);
+
+if std(spec)<1e-10
+
+continue;
+
 end
 
-%% ----------------------------------
-% STEP 6: CO₂ band selection (correct)
-%% ----------------------------------
+reflectance_estimate(i,:) = ...
+fnval( ...
+csaps( ...
+1:bands,...
+spec,...
+0.90),...
+1:bands);
 
-% Try real CO₂ band (~2000 nm)
-absorp_band = find(wavelength >= 2000 & wavelength <= 2100);
+end
 
-% fallback if not present
+%% =====================================
+% CO2 BAND
+%% =====================================
+
+absorp_band = ...
+find( ...
+wavelength>=2000 & ...
+wavelength<=2100);
+
 if isempty(absorp_band)
-    warning('CO₂ band not found → using proxy band');
-    absorp_band = find(wavelength >= 640 & wavelength <= 660);
+
+absorp_band = ...
+round(bands/2);
+
 end
 
-% final safety fallback
-if isempty(absorp_band)
-    absorp_band = round(bands/2);
+%% =====================================
+% JRGE
+%% =====================================
+
+gas_density = ...
+median( ...
+reflectance_estimate(:,absorp_band),...
+2) ...
+- ...
+median( ...
+reshapedData(:,absorp_band),...
+2);
+
+for iter=1:3
+
+reflectance_estimate = ...
+reflectance_estimate ...
++ ...
+0.05 * ...
+(reshapedData ...
+- ...
+reflectance_estimate);
+
+gas_density = ...
+median( ...
+reflectance_estimate(:,absorp_band),...
+2) ...
+- ...
+median( ...
+reshapedData(:,absorp_band),...
+2);
+
 end
 
-%% ----------------------------------
-% STEP 7: Gas estimation (robust)
-%% ----------------------------------
+%% =====================================
+% OUTPUT
+%% =====================================
 
-gas_density = median(reflectance_estimate(:, absorp_band), 2) - ...
-              median(reshapedData(:, absorp_band), 2);
+gas_map = ...
+reshape( ...
+gas_density,...
+rows,...
+cols);
 
-%% ----------------------------------
-% STEP 8: Iterative refinement
-%% ----------------------------------
+gas_map = ...
+gas_map ...
+- ...
+min(gas_map(:));
 
-for iter = 1:3
+gas_map = ...
+gas_map ./ ...
+(max(gas_map(:))+eps);
 
-    reflectance_estimate = reflectance_estimate + ...
-        0.05 * (reshapedData - reflectance_estimate);
+thr = ...
+graythresh(gas_map);
 
-    gas_density = median(reflectance_estimate(:, absorp_band), 2) - ...
-                  median(reshapedData(:, absorp_band), 2);
-end
+binary_hotspots = ...
+gas_map > thr;
 
-%% ----------------------------------
-% STEP 9: Reshape
-%% ----------------------------------
-
-gas_map = reshape(gas_density, rows, cols);
-
-%% ----------------------------------
-% STEP 10: Normalize safely
-%% ----------------------------------
-
-gas_map = gas_map - nanmin(gas_map(:));
-gas_map = gas_map / (nanmax(gas_map(:)) + eps);
-
-%% ----------------------------------
-% STEP 11: Thresholding
-%% ----------------------------------
-
-threshold = graythresh(gas_map);
-binary_hotspots = gas_map > threshold;
-
-%% ----------------------------------
-% STEP 12: Visualization
+%% =====================================
+% DISPLAY
+%% =====================================
 
 figure;
+
 imagesc(gas_map);
+
+axis image;
+
 colorbar;
-title('JRGE Gas Density Map');
+
+title('JRGE');
 
 figure;
-imshow(binary_hotspots);
-title('Detected Hotspots');
 
-fprintf('Done ✅\n');
+imshow(binary_hotspots);
+
+title('Hotspots');
+
+fprintf('Done\n');
 
 end
