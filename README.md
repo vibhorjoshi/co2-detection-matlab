@@ -421,8 +421,6 @@ Heatmaps
 CO₂ Overlays
 ```
 
----
-
 # 🚀 Run
 
 Execute:
@@ -430,20 +428,6 @@ Execute:
 ```matlab
 main_co2_visualisation
 ```
-
----
-
-# 📜 Citation
-
-```bibtex
-@software{co2_hyperspectral_detection,
-title={CO₂ Detection from Hyperspectral AVIRIS Imagery},
-author={Your Name},
-year={2026}
-}
-```
-
----
 
 # 📄 License
 
