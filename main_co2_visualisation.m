@@ -35,7 +35,7 @@ for i = 1:4
         methods{i}, mean(idx(:)), max(idx(:)), pct);
 end
 
-% 2.5 Geospatial Mapping of CO₂ Hotspots (Final, Working Version)
+% 2.5 Geospatial Mapping of CO₂ Hotspots 
 ulx = 314881.49;     % Upper-left Easting from .hdr
 uly = 4218923.9;     % Upper-left Northing from .hdr
 pixel_size = 14.1 * 5; 
