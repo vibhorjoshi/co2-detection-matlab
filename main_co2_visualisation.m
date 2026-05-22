@@ -38,7 +38,7 @@ end
 % 2.5 Geospatial Mapping of CO₂ Hotspots (Final, Working Version)
 ulx = 314881.49;     % Upper-left Easting from .hdr
 uly = 4218923.9;     % Upper-left Northing from .hdr
-pixel_size = 14.1 * 5;  % You downsampled by 1:5, so adjust pixel size
+pixel_size = 14.1 * 5; 
 
 rows = size(hs_maps{1}, 1);
 cols = size(hs_maps{1}, 2);
