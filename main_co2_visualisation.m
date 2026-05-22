@@ -53,7 +53,7 @@ for i = 1:4
     subplot(2,2,i);
     imagesc(xWorld, yWorld, double(hs_maps{i}));
     axis image;
-    set(gca, 'YDir', 'normal');  % Correct map orientation
+    set(gca, 'YDir', 'normal');  %  map orientation
     colormap(gray);
     title([methods{i} ' Geospatial Hotspots']);
     xlabel('Easting (m)');
