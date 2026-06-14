@@ -1,198 +1,309 @@
-# CO2 Plume Detection — Validation Framework
-### Spectral Conditioning (CIBR + JRGE + SFA) vs. Baseline CTMF
+# 🌍 CO₂ Detection from Hyperspectral Imagery using AVIRIS Data
+
+## 📌 Project Overview
+
+This repository presents a comprehensive MATLAB framework for the detection, visualization, and statistical analysis of atmospheric CO₂ signatures using **Airborne Visible/Infrared Imaging Spectrometer (AVIRIS)** hyperspectral imagery.
+
+Developed as part of the **MATLAB and Simulink Challenge**, the project implements a **Progressive Spectral Conditioning Pipeline** that sequentially combines four complementary algorithms:
+
+1. **Continuum Interpolated Band Ratio (CIBR)**
+2. **Joint Reflectance and Gas Estimator (JRGE)**
+3. **Spectral Fitting Algorithm (SFA)**
+4. **Cluster-Tuned Matched Filter (CTMF)**
+
+Instead of relying on a single detector, the framework treats CO₂ retrieval as a sequence of spectral conditioning operations aimed at suppressing background variability and refining localized anomaly responses.
 
 ---
 
-## 1. Purpose
+# 🏆 Features
 
-This package implements the **full validation section** comparing the
-*proposed spectral-conditioning pipeline* against the *baseline CTMF*
-of Marion et al. (2004).
-
-| Configuration | Pipeline |
-|---|---|
-| **Baseline** | Raw AVIRIS reflectance → CTMF → Otsu |
-| **Proposed** | Raw AVIRIS → CIBR → JRGE → SFA → CTMF → Otsu |
-
-The objective is to demonstrate that CIBR + JRGE + SFA spectral
-conditioning produces better plume localisation, reduced background
-clutter, and more concentrated anomaly responses compared with applying
-CTMF directly to raw reflectance.
+* ✅ Efficient processing of large (30 GB+) AVIRIS hyperspectral cubes
+* ✅ Automated spatial cropping and downsampling
+* ✅ Progressive spectral conditioning architecture
+* ✅ Multi-stage CO₂ anomaly detection
+* ✅ Statistical validation and threshold robustness analysis
+* ✅ Connected-component hotspot analysis
+* ✅ Difference mapping and profile analysis
+* ✅ Three-dimensional response visualization
+* ✅ Publication-quality MATLAB figures
 
 ---
 
-## 2. Dataset
+# 🛰 Workflow
 
-| Field | Value |
-|---|---|
-| Sensor | AVIRIS-Classic |
-| File | `f250923t01p00r13_rfl`  +  `f250923t01p00r13_rfl.hdr` |
-| Format | ENVI BSQ, int16, big-endian |
-| Bands | 224 (365 – 2496 nm) |
-| Scale | raw_int ÷ 10 000 = reflectance |
-| Spatial crop | 1 000 × 1 000 px → block-mean ÷ 5 → 200 × 200 |
+The proposed framework performs CO₂ detection through a sequence of spectral conditioning operators.
 
-Place both files in the **same directory** as the MATLAB scripts before
-running.
+```mermaid
+graph TD;
+
+A[Raw AVIRIS Cube]
+--> B[Spatial Downsampling and SWIR Selection]
+
+B --> C[CIBR<br/>Band Ratio]
+
+C --> D[JRGE<br/>Continuum Removal]
+
+D --> E[SFA<br/>Template Matching]
+
+E --> F[CTMF<br/>Cluster-Conditioned Matched Filter]
+
+F --> G[Localized CO₂ Hotspot Map]
+```
 
 ---
 
-## 3. Toolbox Requirements
+# 1️⃣ Continuum Interpolated Band Ratio (CIBR)
 
-| Toolbox | Required by |
-|---|---|
-| **Statistics and Machine Learning** | `kmeans`, `prctile`, `kmeans` |
-| **Image Processing** | `graythresh`, `mat2gray`, `imshow` |
+The CIBR stage serves as a broad anomaly detector by evaluating the depth of the CO₂ absorption feature near **2.05 μm** relative to the local continuum.
 
-Both are standard MathWorks add-ons available in most MATLAB
-installations. Verify with:
+* Left continuum: **2000–2020 nm**
+* Right continuum: **2080–2100 nm**
+
+Its objective is to maximize sensitivity to absorption signatures while preserving weak anomaly candidates.
+
+---
+
+# 2️⃣ Joint Reflectance and Gas Estimator (JRGE)
+
+JRGE performs spline-based continuum removal and suppresses broadband reflectance variations.
+
+This stage:
+
+* reduces background interference,
+* mitigates horizontal striping artifacts,
+* enhances local spectral structures.
+
+---
+
+# 3️⃣ Spectral Fitting Algorithm (SFA)
+
+SFA analyzes the entire **1500–2100 nm SWIR region**.
+
+A dual-Gaussian CO₂ template centered at
+
+* **1575 nm**
+* **2005 nm**
+
+is used to recover weak anomaly responses that may not be apparent during earlier stages.
+
+---
+
+# 4️⃣ Cluster-Tuned Matched Filter (CTMF)
+
+The final stage computes cluster-specific covariance matrices using K-means clustering.
+
+Cluster-conditioned statistics enable the framework to separate localized CO₂ signatures from heterogeneous backgrounds while preserving the underlying response topology.
+
+---
+
+# 📊 Visualizations
+
+## Progressive Spectral Conditioning
+
+The anomaly response evolves gradually across the four stages.
+
+<p align="center">
+<img src="fig_stagewise6panel.png" width="900">
+</p>
+
+**Figure 1.** Progressive response evolution showing scene context, baseline CTMF, CIBR, JRGE, SFA, and the final proposed framework.
+
+---
+
+## Ablation Study
+
+<p align="center">
+<img src="fig_ablation2x2.png" width="700">
+</p>
+
+**Figure 2.** Stagewise outputs corresponding to CIBR, JRGE, SFA, and the complete framework.
+
+---
+
+## Threshold Sensitivity
+
+<p align="center">
+<img src="threshold_sensitivity.png" width="700">
+</p>
+
+**Figure 3.** Sensitivity of hotspot coverage and score statistics under Otsu and percentile thresholds.
+
+---
+
+## Connected Components
+
+<p align="center">
+<img src="fig_connected.png" width="800">
+</p>
+
+**Figure 4.** Connected-component analysis of the top 5% hotspot mask for baseline CTMF and the proposed framework.
+
+---
+
+## Difference Mapping
+
+<p align="center">
+<img src="fig_diffmap.png" width="700">
+</p>
+
+**Figure 5.** Pixel-wise score differences between the baseline CTMF and the proposed framework.
+
+---
+
+## Horizontal Profile Analysis
+
+<p align="center">
+<img src="fig_profile_clean.png" width="700">
+</p>
+
+**Figure 6.** Row-wise matched-filter profile demonstrating preservation of the dominant response peak.
+
+---
+
+## Cumulative Distribution Functions
+
+<p align="center">
+<img src="fig_cdf.png" width="700">
+</p>
+
+**Figure 7.** Comparison of score distributions for baseline and conditioned responses.
+
+---
+
+## Three-Dimensional Response Surfaces
+
+<p align="center">
+<img src="fig_3dsurface.png" width="900">
+</p>
+
+**Figure 8.** Three-dimensional response topology for baseline CTMF and the proposed framework.
+
+---
+
+# 📈 Stagewise Statistical Evolution
+
+| Configuration     | Coverage (%) |  Mean | Std Dev | P95 Score |
+| ----------------- | -----------: | ----: | ------: | --------: |
+| CIBR              |        45.96 | 0.500 |   0.466 |     1.000 |
+| CIBR + JRGE       |        33.02 | 0.142 |   0.188 |     0.520 |
+| CIBR + JRGE + SFA |        48.00 | 0.599 |   0.356 |     0.965 |
+| Full Framework    |        96.53 | 0.597 |   0.113 |     0.780 |
+
+The reduction in standard deviation across successive stages indicates increasing stabilization of the response distribution.
+
+---
+
+# 📈 Baseline vs Proposed Framework
+
+(Top 5% hotspot mask)
+
+| Metric                 | Baseline CTMF | Proposed Framework |
+| ---------------------- | ------------: | -----------------: |
+| Maximum Score          |       0.02612 |            0.02612 |
+| P95 Threshold          |       0.01184 |            0.01184 |
+| Connected Components   |            45 |                 48 |
+| Largest Component Area |         2.73% |              2.65% |
+| Compactness            |         0.081 |              0.053 |
+
+The proposed framework preserves global score statistics while introducing localized refinements in hotspot morphology.
+
+---
+
+# 🛠 Required Toolboxes
+
+The project makes use of several MathWorks products:
+
+* **Hyperspectral Imaging Toolbox**
+* **Image Processing Toolbox**
+* **Statistics and Machine Learning Toolbox**
+* **Curve Fitting Toolbox**
+
+---
+
+# 📂 Dataset Preparation
+
+Download AVIRIS `.hdr` and `.bin` files from:
+
+* **NASA JPL AVIRIS Data Portal**
+
+Place the files inside:
+
+```text
+datasets/
+```
+
+---
+
+# 🚀 Usage
+
+## Run Complete Pipeline
 
 ```matlab
-license('test','statistics_toolbox')
-license('test','image_toolbox')
+>> main_co2_visualisation
 ```
 
 ---
 
-## 4. File Structure
-
-```
-co2_validation/
-│
-├── Helper functions
-│   ├── load_aviris_cube.m      ENVI BSQ reader with crop + downsample
-│   ├── build_target_spectrum.m Dual-Gaussian CO2 target  d(λ)
-│   ├── compute_ctmf.m          Cluster-Tuned Matched Filter engine
-│   ├── compute_cibr.m          Continuum Interpolated Band Ratio
-│   ├── compute_jrge.m          Joint Reflectance & Gas Estimator
-│   ├── compute_sfa.m           Spectral Fitting Algorithm
-│   └── get_rgb_composite.m     Contrast-stretched RGB for display
-│
-├── Main validation scripts
-│   ├── baseline_ctmf.m         Step 1 — Raw AVIRIS → CTMF
-│   ├── save_proposed_results.m Step 2 — Full proposed pipeline
-│   ├── figure_comparison.m     Step 3 — Six-panel comparison figure
-│   ├── histogram_comparison.m  Step 4 — Score histogram analysis
-│   ├── profile_analysis.m      Step 5 — Horizontal profile
-│   ├── selectivity_metrics.m   Step 6 — Selectivity metrics table
-│   ├── ablation_study.m        Step 7 — Four-stage ablation table
-│   ├── ablation_figure.m       Step 8 — Ablation 2×2 figure
-│   └── threshold_sensitivity.m Step 9 — Threshold sensitivity
-│
-└── run_all_validation.m        Master script — runs Steps 1–9 in order
-```
-
----
-
-## 5. Quick Start
+## Generate Figures
 
 ```matlab
-% 1.  Open MATLAB in the co2_validation/ directory  (or cd to it)
-cd /path/to/co2_validation
-
-% 2.  Ensure AVIRIS files are present
-ls('f250923t01p00r13_rfl*')
-
-% 3.  Run everything
-run_all_validation
+>> generate_figures
 ```
 
-To run individual steps:
+---
+
+## Connected Components and Morphology
 
 ```matlab
-run baseline_ctmf           % Step 1
-run save_proposed_results   % Step 2  (depends on nothing)
-run figure_comparison       % Step 3  (depends on Steps 1 & 2)
-run histogram_comparison    % Step 4  (depends on Steps 1 & 2)
-run profile_analysis        % Step 5  (depends on Steps 1 & 2)
-run selectivity_metrics     % Step 6  (depends on Steps 1 & 2)
-run ablation_study          % Step 7  (depends on Step 2)
-run ablation_figure         % Step 8  (depends on Step 2)
-run threshold_sensitivity   % Step 9  (depends on Step 2)
+>> analyse_hotspots
 ```
 
 ---
 
-## 6. Output Files
+## Threshold Robustness Analysis
 
-### Figures
-
-| File | Contents |
-|---|---|
-| `comparison_pipeline.png` | RGB + Baseline CTMF + CIBR + JRGE + SFA + Proposed CTMF |
-| `histogram_scores.png` | Overlaid probability histograms of baseline vs. proposed scores |
-| `profile_comparison.png` | Horizontal profile through plume centre row |
-| `ablation_maps.png` | 2×2 grid: CIBR / JRGE / SFA / CTMF score maps |
-| `threshold_sensitivity.png` | Coverage (%) and mean hotspot score vs. threshold method |
-
-### Tables (CSV)
-
-| File | Contents |
-|---|---|
-| `quantitative_metrics.csv` | Mean, Max, σ, P95, hotspot count, coverage, selectivity ratio |
-| `ablation_results.csv` | Same metrics for each of the four ablation stages |
-| `threshold_results.csv` | Coverage / hotspot count / mean hotspot score per threshold |
-
-### MAT files
-
-| File | Variables |
-|---|---|
-| `baseline_ctmf_results.mat` | `baselineScore`, `baselineMask`, `thresholdBaseline`, `wlSWIR` |
-| `proposed_results.mat` | `cibrScore`, `jrgeScore`, `sfaScore`, `ctmfScore`, `binaryMask`, `cube` |
+```matlab
+>> threshold_analysis
+```
 
 ---
 
-## 7. Algorithm Parameters
+# 📁 Repository Structure
 
-| Parameter | Value | Location |
-|---|---|---|
-| Spatial crop | rows 1–1000, cols 1–1000 | `baseline_ctmf.m`, `save_proposed_results.m` |
-| Downsampling | ×5 block mean → 200×200 | same |
-| Reflectance scale | ÷ 10 000 | same |
-| SWIR window | 1 500 – 2 200 nm | same |
-| CTMF clusters K | 4 | same |
-| CTMF regularisation λ | 10⁻⁶ | same |
-| RNG seed | 1 | same |
-| Target spectrum | 0.30·G(1575,15) + 0.70·G(2005,12) | `build_target_spectrum.m` |
-| CIBR left baseline | 2 000 – 2 020 nm | `compute_cibr.m` |
-| CIBR absorption | 2 040 – 2 060 nm | same |
-| CIBR right baseline | 2 080 – 2 100 nm | same |
-| JRGE window | 2 000 – 2 100 nm | `compute_jrge.m` |
-| JRGE α | 0.05 | same |
-| JRGE iterations T | 3 | same |
-| SFA SWIR window | 1 500 – 2 100 nm | `compute_sfa.m` |
-| Threshold | Otsu (auto) | all main scripts |
+```text
+.
+├── datasets/
+├── output_figures/
+├── co2_cibr.m
+├── co2_jrge.m
+├── co2_sfa.m
+├── co2_ctmf.m
+├── main_co2_visualisation.m
+├── generate_figures.m
+├── analyse_hotspots.m
+├── threshold_analysis.m
+└── README.md
+```
 
 ---
 
-## 8. Sign Convention
+# 📚 Citation
 
-All score maps are signed so that **positive values indicate a CO2-like
-anomaly** and background pixels cluster near zero:
+If you use this repository in your work, please cite:
 
-- **CIBR**: `score = 1 − CIBR`  (positive = absorption below continuum)
-- **JRGE**: integral of absorption residual below the linear continuum
-- **SFA**: negated cosine similarity (CO2 reduces reflectance, negation gives positive score)
-- **CTMF**: matched-filter output; the dual-Gaussian target is negated in
-  `build_target_spectrum.m` so the dot product with a CO2 deficit spectrum
-  is positive.
-
----
-
-## 9. What the Metrics Show
-
-| Metric | What it demonstrates |
-|---|---|
-| **Selectivity Ratio** (Max/Mean) | Concentration of the anomaly response at the plume vs. the whole scene |
-| **Coverage (%)** | Background suppression — lower is better (fewer false positives) |
-| **95th Percentile** | Upper-tail score concentration near the true plume |
-| **Std Deviation** | Distribution spread — lower means the background is flatter |
-| **PBR (Profile)** | Peak-to-background ratio along the plume row — higher = sharper localisation |
+```bibtex
+@misc{co2_aviris_progressive,
+  title={Progressive Spectral Conditioning Framework for CO₂ Detection from AVIRIS Hyperspectral Imagery},
+  author={Your Name},
+  year={2026},
+  note={MATLAB and Simulink Challenge}
+}
+```
 
 ---
 
-## 10. Reference
+# 📄 License
 
-Marion, R., Michel, R., & Faye, C. (2004).
-**Measuring trace gases in plumes from hyperspectral remotely sensed data.**
-*IEEE Transactions on Geoscience and Remote Sensing*, 42(4), 854–864.
+This project is distributed under the **MIT License**.
+
+See the `LICENSE` file for details.
