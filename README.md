@@ -93,16 +93,14 @@ is used to recover weak anomaly responses that may not be apparent during earlie
 The final stage computes cluster-specific covariance matrices using K-means clustering.
 
 Cluster-conditioned statistics enable the framework to separate localized CO₂ signatures from heterogeneous backgrounds while preserving the underlying response topology.
-
-```markdown
 # 📊 Visualizations
 
 ## Progressive Spectral Conditioning and Response Refinement
 
-The anomaly response evolves progressively through successive conditioning stages while preserving the dominant structures present in the scene.
+The anomaly response evolves gradually through successive conditioning stages while preserving the dominant structures present in the scene.
 
 <p align="center">
-<img src="fig_stagewise6panel.png" width="900">
+  <img src="./fig_stagewise6panel.png" width="900">
 </p>
 
 **Figure 1.** Progressive spectral conditioning and response refinement showing the scene context, baseline CTMF response, and the successive outputs obtained after CIBR, JRGE, SFA, and the complete framework.
@@ -114,7 +112,7 @@ The anomaly response evolves progressively through successive conditioning stage
 The row-wise matched-filter profile confirms that the dominant response peak is preserved after spectral conditioning.
 
 <p align="center">
-<img src="fig_profile.png" width="700">
+  <img src="./fig_profile.png" width="700">
 </p>
 
 **Figure 2.** Horizontal matched-filter profile through the plume centre. The baseline CTMF and the proposed framework exhibit nearly identical peak locations and local contrast.
@@ -126,7 +124,7 @@ The row-wise matched-filter profile confirms that the dominant response peak is 
 The intermediate responses illustrate the complementary role of each stage in progressively modifying the anomaly distribution.
 
 <p align="center">
-<img src="fig_ablation2x2.png" width="750">
+  <img src="./fig_ablation2x2.png" width="750">
 </p>
 
 **Figure 3.** Progressive spectral conditioning and feature refinement corresponding to (a) CIBR, (b) JRGE, (c) SFA, and (d) the complete framework.
@@ -138,7 +136,7 @@ The intermediate responses illustrate the complementary role of each stage in pr
 The spatial extent of anomaly responses changes across successive conditioning stages, reflecting the interaction between spectral sensitivity and response stabilization.
 
 <p align="center">
-<img src="fig_hotspot_evolution.png" width="750">
+  <img src="./fig_hotspot_evolution.png" width="750">
 </p>
 
 **Figure 4.** Evolution of hotspot coverage across the conditioning pipeline.
@@ -150,7 +148,7 @@ The spatial extent of anomaly responses changes across successive conditioning s
 Threshold robustness was investigated using Otsu and percentile-based thresholding strategies.
 
 <p align="center">
-<img src="threshold_sensitivity.png" width="700">
+  <img src="./threshold_sensitivity.png" width="700">
 </p>
 
 **Figure 5.** Sensitivity of hotspot coverage and score statistics under Otsu, P85, P90, and P95 thresholding schemes.
@@ -162,7 +160,7 @@ Threshold robustness was investigated using Otsu and percentile-based thresholdi
 Connected-component analysis provides insight into the spatial organization of the top 5% hotspot mask.
 
 <p align="center">
-<img src="fig_connected.png" width="800">
+  <img src="./fig_connected.png" width="800">
 </p>
 
 **Figure 6.** Connected-component analysis of the P95 hotspot mask comparing the baseline CTMF and the proposed framework.
@@ -174,7 +172,7 @@ Connected-component analysis provides insight into the spatial organization of t
 The score differences remain localized around high-response regions, indicating that spectral conditioning introduces only small corrections to the baseline response.
 
 <p align="center">
-<img src="fig_diffmap.png" width="700">
+  <img src="./fig_diffmap.png" width="700">
 </p>
 
 **Figure 7.** Pixel-wise difference map obtained by subtracting the baseline CTMF response from the proposed framework.
@@ -186,7 +184,7 @@ The score differences remain localized around high-response regions, indicating 
 Comparison of cumulative distribution functions demonstrates that the overall score statistics are largely preserved.
 
 <p align="center">
-<img src="fig_cdf.png" width="700">
+  <img src="./fig_cdf.png" width="700">
 </p>
 
 **Figure 8.** Cumulative distribution functions of matched-filter scores for the baseline CTMF and the proposed framework.
@@ -198,12 +196,10 @@ Comparison of cumulative distribution functions demonstrates that the overall sc
 The response topology remains largely unchanged after spectral conditioning, indicating localized refinement rather than global distortion.
 
 <p align="center">
-<img src="fig_3dsurface.png" width="900">
+  <img src="./fig_3dsurface.png" width="900">
 </p>
 
 **Figure 9.** Three-dimensional response surfaces corresponding to the baseline CTMF and the proposed framework.
-```
-
 
 
 # 📈 Stagewise Statistical Evolution
